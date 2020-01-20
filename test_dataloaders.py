@@ -1,10 +1,5 @@
 import argparse
-import torch
 import torch.utils.data
-from torch import nn, optim
-from torch.nn import functional as F
-from torchvision import datasets, transforms
-from torchvision.utils import save_image
 from Methods.models import load_datasets, AE_CelebA, AE_MNIST
 
 
@@ -20,9 +15,9 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
 parser.add_argument('--source-data', type=str, default='MNIST',
-                    help='source dataset')
-parser.add_argument('--target-data', type=str, default='KMNIST',
-                    help='target dataset')
+                    help='data name')
+parser.add_argument('--datapath', type=str, default='Data',
+                    help='data path')
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -40,12 +35,12 @@ for src in ['MNIST', 'CelebA']:
         model = AE_CelebA(z_dim=10, nc=3)
 
     args.source_data = src
-    src_loaders = load_datasets(pathname=pathname, args=args, src=True)
+    src_loaders = load_datasets(args=args)
     for i, (data, _) in enumerate(src_loaders['train']):
         data = data.to(device)
         print(i, data.size())
         if i == 0:
-            x_recon, z = model(data)
+            x_recon, z, _, _ = model(data)
             print(x_recon.size())
         else:
             break

@@ -57,7 +57,7 @@ def train(model, train_loader, optimizer, device, epoch, args):
         data = data.to(device)
         optimizer.zero_grad()
         recon_batch, z = model(data)
-        rec_loss = method.loss_function(recon_batch, data, args.rec_type)
+        rec_loss = method.loss_function(recon_batch, data, args.loss_type)
         reg_loss = args.gamma * maximum_mean_discrepancy(z, device)
         loss = rec_loss + reg_loss
         loss.backward()
@@ -83,7 +83,7 @@ def test(model, test_loader, device, args):
         for i, (data, _) in enumerate(test_loader):
             data = data.to(device)
             recon_batch, z = model(data)
-            rec_loss = method.loss_function(recon_batch, data, args.rec_type)
+            rec_loss = method.loss_function(recon_batch, data, args.loss_type)
             reg_loss = args.gamma * maximum_mean_discrepancy(z, device)
             test_rec_loss += rec_loss.item()
             test_reg_loss += reg_loss.item()
@@ -98,13 +98,14 @@ def test(model, test_loader, device, args):
 
 
 def train_model(model, train_loader, test_loader, device, args):
+    model = model.to(device)
     loss_list = []
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=1e-3, betas=(0.5, 0.999))
     for epoch in range(1, args.epochs + 1):
         train(model, train_loader, optimizer, device, epoch, args)
         test_rec_loss, test_reg_loss, test_loss = test(model, test_loader, device, args)
         loss_list.append([test_rec_loss, test_reg_loss, test_loss])
-        if epoch % 5 == 0:
+        if epoch % args.landmark_interval == 0:
             evaluation.interpolation_2d(model, test_loader, device, epoch, args)
             evaluation.sampling(model, device, epoch, args, prior=None)
             evaluation.reconstruction(model, test_loader, device, epoch, args)

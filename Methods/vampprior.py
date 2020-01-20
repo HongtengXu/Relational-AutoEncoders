@@ -9,19 +9,22 @@ import Methods.models as method
 
 # regularizer used in VampPrior
 class Prior(nn.Module):
-    def __init__(self, data_size: list):
+    def __init__(self, data_size: list, device):
         super(Prior, self).__init__()
         # data_size = [num_component, num_channels, num_dim, ...]
         self.data_size = data_size
-        self.number_components = data_size[0]
+        self.num_components = data_size[0]
         self.output_size = int(np.prod(data_size) / data_size[0])
-        self.nonlinearity = nn.Hardtanh(min_val=0.0, max_val=1.0)
-        self.linear = nn.Linear(self.number_components, self.output_size, bias=True)
-        self.idle_input = torch.eye(self.number_components, self.number_components, requires_grad=False)
+        self.nonlinearity = nn.Sigmoid()  # nn.Hardtanh(min_val=0.0, max_val=1.0)
+        # self.linear = nn.Linear(self.num_components, self.output_size, bias=False)
+        # # self.linear.weight.data.normal_(0.05, 0.01)
+        # self.idle_input = torch.eye(self.num_components, self.num_components, requires_grad=False).to(device)
+        self.basis = nn.Parameter(torch.randn(data_size), requires_grad=True)
 
     def forward(self):
-        h = self.linear(self.idle_input)
-        return self.nonlinearity(h).reshape(self.data_size)
+        # h = self.linear(self.idle_input)
+        # return self.nonlinearity(h).reshape(self.data_size)
+        return self.nonlinearity(self.basis)
 
 
 def log_normal_diag(x, mean, log_var, dim=None):
@@ -36,7 +39,7 @@ def log_normal_standard(x, dim=None):
 
 def log_gmm(z, vae_model, prior_model):
     x = prior_model()
-    z_p_mean, z_p_logvar = vae_model(x)
+    _, _, z_p_mean, z_p_logvar = vae_model(x)
     # expand z
     z_expand = z.unsqueeze(1)
     means = z_p_mean.unsqueeze(0)
@@ -52,7 +55,7 @@ def log_gmm(z, vae_model, prior_model):
 def KL_divergence_gmm(z_q, z_q_mean, z_q_logvar, vae_model, prior_model):
     log_p_z = log_gmm(z_q, vae_model, prior_model)
     log_q_z = log_normal_diag(z_q, z_q_mean, z_q_logvar, dim=1)
-    return -(log_p_z - log_q_z)
+    return -(log_p_z - log_q_z).sum()
 
 
 def train(model, prior, train_loader, optimizer, device, epoch, args):
@@ -64,7 +67,7 @@ def train(model, prior, train_loader, optimizer, device, epoch, args):
         data = data.to(device)
         optimizer.zero_grad()
         recon_batch, z, mu, logvar = model(data)
-        rec_loss = method.loss_function(recon_batch, data, args.rec_type)
+        rec_loss = method.loss_function(0.95 * recon_batch, data, args.loss_type)
         reg_loss = args.gamma * KL_divergence_gmm(z, mu, logvar, model, prior)
         loss = rec_loss + reg_loss
         loss.backward()
@@ -72,9 +75,12 @@ def train(model, prior, train_loader, optimizer, device, epoch, args):
         train_reg_loss += reg_loss.item()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tAverage RecLoss: {:.4f} RegLoss: {:.4f} TotalLoss: {:.4f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item() / len(data)))
+                100. * batch_idx / len(train_loader),
+                rec_loss.item() / len(data),
+                reg_loss.item() / len(data),
+                loss.item() / len(data)))
 
     print('====> Epoch: {} Average RecLoss: {:.4f} RegLoss: {:.4f} TotalLoss: {:.4f}'.format(
         epoch, train_rec_loss / len(train_loader.dataset), train_reg_loss / len(train_loader.dataset),
@@ -91,7 +97,7 @@ def test(model, prior, test_loader, device, args):
         for i, (data, _) in enumerate(test_loader):
             data = data.to(device)
             recon_batch, z, mu, logvar = model(data)
-            rec_loss = method.loss_function(recon_batch, data, args.rec_type)
+            rec_loss = method.loss_function(0.95 * recon_batch, data, args.loss_type)
             reg_loss = args.gamma * KL_divergence_gmm(z, mu, logvar, model, prior)
             test_rec_loss += rec_loss.item()
             test_reg_loss += reg_loss.item()
@@ -106,18 +112,21 @@ def test(model, prior, test_loader, device, args):
 
 
 def train_model(model, prior, train_loader, test_loader, device, args):
+    model = model.to(device)
+    prior = prior.to(device)
     loss_list = []
-    optimizer = optim.Adam(list(model.parameters()) + list(prior.parameters()), lr=1e-3)
+    optimizer = optim.Adam(list(model.parameters()) + list(prior.parameters()), lr=1e-4)
     for epoch in range(1, args.epochs + 1):
         train(model, prior, train_loader, optimizer, device, epoch, args)
         test_rec_loss, test_reg_loss, test_loss = test(model, prior, test_loader, device, args)
         loss_list.append([test_rec_loss, test_reg_loss, test_loss])
-        if epoch % 5 == 0:
+        if epoch % args.landmark_interval == 0:
             evaluation.interpolation_2d(model, test_loader, device, epoch, args)
             prior.eval()
             model.eval()
             x = prior()
-            z_p_mean, z_p_logvar = model(x)
+            _, _, z_p_mean, z_p_logvar = model(x)
+            print(z_p_mean.size())
             evaluation.sampling(model, device, epoch, args, prior=[z_p_mean, z_p_logvar])
             evaluation.reconstruction(model, test_loader, device, epoch, args)
     return loss_list

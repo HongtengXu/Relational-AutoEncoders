@@ -13,14 +13,17 @@ class Prior(nn.Module):
         self.data_size = data_size
         self.number_components = data_size[0]
         self.output_size = data_size[1]
-        self.linear1 = nn.Linear(self.number_components, self.output_size, bias=True)
-        self.linear2 = nn.Linear(self.number_components, self.output_size, bias=False)
-        self.idle_input = torch.eye(self.number_components, self.number_components, requires_grad=False)
+        self.mu = nn.Parameter(torch.randn(data_size), requires_grad=True)
+        self.logvar = nn.Parameter(torch.randn(data_size), requires_grad=True)
+        # self.linear1 = nn.Linear(self.number_components, self.output_size, bias=True)
+        # self.linear2 = nn.Linear(self.number_components, self.output_size, bias=False)
+        # self.idle_input = torch.eye(self.number_components, self.number_components, requires_grad=False)
 
     def forward(self):
-        mu = self.linear1(self.idle_input)
-        logvar = self.linear2(self.idle_input)
-        return mu, logvar
+        # mu = self.linear1(self.idle_input)
+        # logvar = self.linear2(self.idle_input)
+        # return mu, logvar
+        return self.mu, self.logvar
 
 
 def sum_matrix(pts_src: torch.Tensor, pts_dst: torch.Tensor):
@@ -141,13 +144,16 @@ def cost_mat(cost_s: torch.Tensor,
 
 def gwd_estimation(cost_s: torch.Tensor,
                    cost_t: torch.Tensor,
-                   num_layer: int = 20):
+                   num_layer: int = 20, device='cpu'):
     ns = cost_s.size(0)
     nt = cost_t.size(0)
     p_s = torch.ones(ns, 1) / ns
     p_t = torch.ones(nt, 1) / nt
     tran = torch.ones(ns, nt) / (ns * nt)
-    dual = torch.ones(ns, 1) / ns
+    p_s = p_s.to(device)
+    p_t = p_t.to(device)
+    tran = tran.to(device)
+    dual = (torch.ones(ns, 1) / ns).to(device)
     for m in range(num_layer):
         cost = cost_mat(cost_s, cost_t, tran)
         # cost /= torch.max(cost)
@@ -162,14 +168,16 @@ def gwd_estimation(cost_s: torch.Tensor,
     return d_gw, tran
 
 
-def wd_estimation(cost: torch.Tensor, num_layer: int = 20):
+def wd_estimation(cost: torch.Tensor, num_layer: int = 20, device='cpu'):
     ns = cost.size(0)
     nt = cost.size(1)
     p_s = torch.ones(ns, 1) / ns
     p_t = torch.ones(nt, 1) / nt
     tran = torch.ones(ns, nt) / (ns * nt)
-
-    dual = torch.ones(ns, 1) / ns
+    p_s = p_s.to(device)
+    p_t = p_t.to(device)
+    tran = tran.to(device)
+    dual = (torch.ones(ns, 1) / ns).to(device)
     gkernel = torch.exp(-10 * cost / torch.max(cost))
     for m in range(num_layer):
         kernel = gkernel * tran
@@ -183,16 +191,17 @@ def wd_estimation(cost: torch.Tensor, num_layer: int = 20):
     return d_w, tran
 
 
-def W_discrepancy(mu1, mu2, logvar1, logvar2):
+def W_discrepancy(mu1, mu2, logvar1, logvar2, device):
     cost = distance_gmm(mu1, mu2, logvar1, logvar2)
-    _, tran = wd_estimation(cost)
+    _, tran = wd_estimation(cost, device=device)
     return (cost * tran.detach().data).sum()
 
 
-def GW_discrepancy(mu1, logvar1):
+def GW_discrepancy(mu1, logvar1, device):
     cost1 = distance_gmm(mu1, mu1, logvar1, logvar1)
-    cost2 = torch.ones(size=cost1.size(), requires_grad=False) - torch.eye(cost1.size(0), requires_grad=False)
-    _, tran = gwd_estimation(cost1, cost2)
+    cost2 = (torch.ones(size=cost1.size(), requires_grad=False) -
+             torch.eye(cost1.size(0), requires_grad=False)).to(device)
+    _, tran = gwd_estimation(cost1, cost2, device=device)
     return (cost_mat(cost1, cost2, tran.detach().data) * tran.detach().data).sum()
 
 
@@ -206,8 +215,8 @@ def train(model, prior, train_loader, optimizer_model, optimizer_prior, device, 
         optimizer_model.zero_grad()
         recon_batch, z, mu, logvar = model(data)
         z_mu, z_logvar = prior()
-        rec_loss = method.loss_function(recon_batch, data, args.rec_type)
-        reg_loss = args.gamma * W_discrepancy(mu, z_mu, logvar, z_logvar)
+        rec_loss = method.loss_function(recon_batch, data, args.loss_type)
+        reg_loss = args.gamma * W_discrepancy(mu, z_mu, logvar, z_logvar, device)
         loss = rec_loss + reg_loss
         loss.backward()
         train_rec_loss += rec_loss.item()
@@ -227,8 +236,8 @@ def train(model, prior, train_loader, optimizer_model, optimizer_prior, device, 
         optimizer_prior.zero_grad()
         recon_batch, z, mu, logvar = model(data)
         z_mu, z_logvar = prior()
-        w_loss = args.gamma * W_discrepancy(mu, z_mu, logvar, z_logvar)
-        gw_loss = args.beta * GW_discrepancy(z_mu, z_logvar)
+        w_loss = args.gamma * W_discrepancy(mu, z_mu, logvar, z_logvar, device)
+        gw_loss = args.beta * GW_discrepancy(z_mu, z_logvar, device)
         loss = w_loss + gw_loss
         loss.backward()
         train_w_loss += w_loss.item()
@@ -255,9 +264,9 @@ def test(model, prior, test_loader, device, args):
             data = data.to(device)
             recon_batch, z, mu, logvar = model(data)
             z_mu, z_logvar = prior()
-            rec_loss = method.loss_function(recon_batch, data, args.rec_type)
-            reg_loss = args.gamma * W_discrepancy(mu, z_mu, logvar, z_logvar) + \
-                args.beta * GW_discrepancy(z_mu, z_logvar)
+            rec_loss = method.loss_function(recon_batch, data, args.loss_type)
+            reg_loss = args.gamma * W_discrepancy(mu, z_mu, logvar, z_logvar, device) + \
+                args.beta * GW_discrepancy(z_mu, z_logvar, device)
             test_rec_loss += rec_loss.item()
             test_reg_loss += reg_loss.item()
             test_loss += (rec_loss.item() + reg_loss.item())
@@ -271,14 +280,16 @@ def test(model, prior, test_loader, device, args):
 
 
 def train_model(model, prior, train_loader, test_loader, device, args):
+    model = model.to(device)
+    prior = prior.to(device)
     loss_list = []
-    optimizer_model = optim.Adam(model.parameters(), lr=1e-3)
-    optimizer_prior = optim.Adam(prior.parameters(), lr=1e-3)
+    optimizer_model = optim.Adam(model.parameters(), lr=1e-3, betas=(0.5, 0.999))
+    optimizer_prior = optim.Adam(prior.parameters(), lr=1e-3, betas=(0.5, 0.999))
     for epoch in range(1, args.epochs + 1):
         train(model, prior, train_loader, optimizer_model, optimizer_prior, device, epoch, args)
         test_rec_loss, test_reg_loss, test_loss = test(model, prior, test_loader, device, args)
         loss_list.append([test_rec_loss, test_reg_loss, test_loss])
-        if epoch % 5 == 0:
+        if epoch % args.landmark_interval == 0:
             evaluation.interpolation_2d(model, test_loader, device, epoch, args)
             prior.eval()
             z_p_mean, z_p_logvar = prior()
