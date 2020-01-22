@@ -6,7 +6,7 @@ from Methods.models import load_datasets, AE_CelebA, AE_MNIST
 
 
 parser = argparse.ArgumentParser(description='VAE Example')
-parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+parser.add_argument('--batch-size', type=int, default=100, metavar='N',
                     help='input batch size for training (default: 512)')
 parser.add_argument('--epochs', type=int, default=50, metavar='N',
                     help='number of epochs to train (default: 10)')
@@ -32,7 +32,7 @@ parser.add_argument('--nc', type=int, default=1,
                     help='the number of channels')
 parser.add_argument('--gamma', type=float, default=1.0,
                     help='the weight of regularizer')
-parser.add_argument('--model-type', type=str, default='variational',
+parser.add_argument('--model-type', type=str, default='probabilistic',
                     help='the type of model')
 parser.add_argument('--loss-type', type=str, default='BCE',
                     help='the type of loss')
@@ -50,14 +50,14 @@ if __name__ == '__main__':
             args.x_dim = int(28 * 28)
             args.z_dim = 8
             args.nc = 1
-            args.loss_type = 'BCE'
+            args.loss_type = 'MSE'
             args.landmark_interval = 5
             model = AE_MNIST(z_dim=args.z_dim, nc=args.nc, model_type=args.model_type)
         else:
             args.x_dim = int(64 * 64)
             args.z_dim = 64
             args.nc = 3
-            args.loss_type = 'MAE+MSE'
+            args.loss_type = 'MSE'
             args.landmark_interval = 5
             model = AE_CelebA(z_dim=args.z_dim, nc=args.nc, model_type=args.model_type)
 

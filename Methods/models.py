@@ -108,7 +108,7 @@ class View(nn.Module):
 
 class AE_MNIST(nn.Module):
     """Encoder-Decoder architecture for a typical autoencoder."""
-    def __init__(self, z_dim=8, nc=1, model_type='variational'):
+    def __init__(self, z_dim=8, nc=1, model_type='probabilistic'):
         super(AE_MNIST, self).__init__()
         self.type = model_type
         self.z_dim = z_dim
@@ -129,7 +129,7 @@ class AE_MNIST(nn.Module):
             View((-1, 1024 * 1 * 1))         # B, 1024*4*4
         )
 
-        if self.type == 'variational':
+        if self.type == 'probabilistic':
             self.fc1 = nn.Linear(1024 * 1 * 1, z_dim)    # B, z_dim
             self.fc2 = nn.Linear(1024 * 1 * 1, z_dim)    # B, z_dim
         else:
@@ -157,7 +157,7 @@ class AE_MNIST(nn.Module):
         return mu + eps*std
 
     def forward(self, x):
-        if self.type == 'variational':
+        if self.type == 'probabilistic':
             z, mu, logvar = self.encode(x)
             x_recon = self.decode(z)
             return x_recon, z, mu, logvar
@@ -168,7 +168,7 @@ class AE_MNIST(nn.Module):
 
     def encode(self, x):
         z = self.encoder(x)
-        if self.type == 'variational':
+        if self.type == 'probabilistic':
             mu = self.fc1(z)
             logvar = self.fc2(z)
             z = self.reparameterize(mu, logvar)
@@ -183,7 +183,7 @@ class AE_MNIST(nn.Module):
 
 class AE_CelebA(nn.Module):
     """Encoder-Decoder architecture for a typical autoencoder."""
-    def __init__(self, z_dim=10, nc=3, model_type='variational'):
+    def __init__(self, z_dim=10, nc=3, model_type='probabilistic'):
         super(AE_CelebA, self).__init__()
         self.type = model_type
         self.z_dim = z_dim
@@ -204,7 +204,7 @@ class AE_CelebA(nn.Module):
             View((-1, 1024 * 4 * 4))         # B, 1024*4*4
         )
 
-        if self.type == 'variational':
+        if self.type == 'probabilistic':
             self.fc1 = nn.Linear(1024 * 4 * 4, z_dim)    # B, z_dim
             self.fc2 = nn.Linear(1024 * 4 * 4, z_dim)    # B, z_dim
         else:
@@ -231,7 +231,7 @@ class AE_CelebA(nn.Module):
         return mu + eps*std
 
     def forward(self, x):
-        if self.type == 'variational':
+        if self.type == 'probabilistic':
             z, mu, logvar = self.encode(x)
             x_recon = self.decode(z)
             return x_recon, z, mu, logvar
@@ -242,7 +242,7 @@ class AE_CelebA(nn.Module):
 
     def encode(self, x):
         z = self.encoder(x)
-        if self.type == 'variational':
+        if self.type == 'probabilistic':
             mu = self.fc1(z)
             logvar = self.fc2(z)
             z = self.reparameterize(mu, logvar)
@@ -340,9 +340,9 @@ def loss_function(recon_x, x, rec_type):
         # print(x.size())
         reconstruction_loss = F.binary_cross_entropy(recon_x, x, reduction='sum')
     elif rec_type == 'MSE':
-        reconstruction_loss = F.mse_loss(recon_x, x, size_average=False)
+        reconstruction_loss = F.mse_loss(recon_x, x, reduction='sum')
     elif rec_type == 'MAE':
-        reconstruction_loss = F.l1_loss(recon_x, x, size_average=False)
+        reconstruction_loss = F.l1_loss(recon_x, x, reduction='sum')
     else:
         reconstruction_loss = F.mse_loss(recon_x, x, reduction='sum') + F.l1_loss(recon_x, x, reduction='sum')
     return reconstruction_loss

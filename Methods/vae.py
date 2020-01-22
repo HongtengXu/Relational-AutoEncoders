@@ -67,7 +67,7 @@ def test(model, test_loader, device, args):
 def train_model(model, train_loader, test_loader, device, args):
     model = model.to(device)
     loss_list = []
-    optimizer = optim.Adam(model.parameters(), lr=1e-3, betas=(0.5, 0.999))
+    optimizer = optim.Adam(model.parameters(), lr=1e-3, betas=(0.9, 0.999))
     for epoch in range(1, args.epochs + 1):
         train(model, train_loader, optimizer, device, epoch, args)
         test_rec_loss, test_reg_loss, test_loss = test(model, test_loader, device, args)

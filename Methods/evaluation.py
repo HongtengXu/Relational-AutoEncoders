@@ -11,7 +11,7 @@ def visualization_pca(model, test_loader, device, args):
     with torch.no_grad():
         for i, (data, label) in enumerate(test_loader):
             data = data.to(device)
-            if args.model_type == 'variational':
+            if args.model_type == 'probabilistic':
                 recon_batch, z, mu, logvar = model(data)
             else:
                 recon_batch, mu = model(data)
@@ -42,7 +42,7 @@ def visualization_tsne(model, test_loader, device, args):
     with torch.no_grad():
         for i, (data, label) in enumerate(test_loader):
             data = data.to(device)
-            if args.model_type == 'variational':
+            if args.model_type == 'probabilistic':
                 recon_batch, z, mu, logvar = model(data)
             else:
                 recon_batch, mu = model(data)
@@ -73,7 +73,7 @@ def visualization_tsne_trajectory(model, test_loader, device, args):
     with torch.no_grad():
         for i, (data, label) in enumerate(test_loader):
             data = data.to(device)
-            if args.model_type == 'variational':
+            if args.model_type == 'probabilistic':
                 recon_batch, z, mu, logvar = model(data)
             else:
                 recon_batch, mu = model(data)
@@ -92,7 +92,7 @@ def visualization_tsne_trajectory(model, test_loader, device, args):
         for i, (data, label) in enumerate(test_loader):
             if i == 0:
                 data = data.to(device)
-                if args.model_type == 'variational':
+                if args.model_type == 'probabilistic':
                     recon_batch, z, mu, logvar = model(data)
                 else:
                     recon_batch, mu = model(data)
@@ -156,7 +156,7 @@ def visualization_pca_trajectory(model, test_loader, device, args):
     with torch.no_grad():
         for i, (data, label) in enumerate(test_loader):
             data = data.to(device)
-            if args.model_type == 'variational':
+            if args.model_type == 'probabilistic':
                 recon_batch, z, mu, logvar = model(data)
             else:
                 recon_batch, mu = model(data)
@@ -175,7 +175,7 @@ def visualization_pca_trajectory(model, test_loader, device, args):
         for i, (data, label) in enumerate(test_loader):
             if i == 0:
                 data = data.to(device)
-                if args.model_type == 'variational':
+                if args.model_type == 'probabilistic':
                     recon_batch, z, mu, logvar = model(data)
                 else:
                     recon_batch, mu = model(data)
@@ -231,13 +231,13 @@ def visualization_pca_trajectory(model, test_loader, device, args):
     plt.close('all')
 
 
-def interpolation_2d(model, data_loader, device, epoch, args):
+def interpolation_2d(model, data_loader, device, epoch, args, nrow=14):
     model.eval()
     with torch.no_grad():
         for i, (data, label) in enumerate(data_loader):
             if i == 0:
                 data = data.to(device)
-                if args.model_type == 'variational':
+                if args.model_type == 'probabilistic':
                     recon_batch, z, mu, logvar = model(data)
                 else:
                     recon_batch, mu = model(data)
@@ -245,33 +245,34 @@ def interpolation_2d(model, data_loader, device, epoch, args):
             else:
                 break
 
-        latents = torch.randn(100, mu.size(1)).to(device)
-        for i in range(10):
-            for j in range(10):
-                x1 = (9 - i)/9
-                x2 = i/9
-                y1 = (9 - j)/9
-                y2 = j/9
-                n = 10 * i + j
+        latents = torch.randn(int(nrow ** 2), mu.size(1)).to(device)
+        for i in range(nrow):
+            for j in range(nrow):
+                x1 = (nrow - 1 - i) / (nrow - 1)
+                x2 = i / (nrow - 1)
+                y1 = (nrow - 1 - j) / (nrow - 1)
+                y2 = j / (nrow - 1)
+                n = nrow * i + j
                 latents[n, :] = y1 * (x1 * mu[0, :] + x2 * mu[1, :]) + y2 * (x1 * mu[2, :] + x2 * mu[3, :])
 
         samples = model.decode(latents).cpu()
         s = int(args.x_dim ** 0.5)
-        save_image(samples.view(100, args.nc, s, s),
-                   '{}/interp2d_{}_{}.png'.format(args.resultpath, args.source_data, epoch), nrow=10)
+        save_image(samples.view(int(nrow ** 2), args.nc, s, s),
+                   '{}/interp2d_{}_{}.png'.format(args.resultpath, args.source_data, epoch), nrow=nrow)
 
 
-def sampling(model, device, epoch, args, prior=None):
+def sampling(model, device, epoch, args, prior=None, nrow=14):
     model.eval()
+    n_samples = int(nrow ** 2)
     with torch.no_grad():
         if prior is None:  # normal prior
-            sample = torch.randn(100, args.z_dim)
+            sample = torch.randn(n_samples, args.z_dim)
         else:
             mu = prior[0]
             logvar = prior[1]
             n_components = prior[0].size(0)
-            sample = torch.randn(100, args.z_dim)
-            for i in range(100):
+            sample = torch.randn(n_samples, args.z_dim)
+            for i in range(n_samples):
                 idx = int(n_components * np.random.rand())
                 std = torch.exp(0.5 * logvar[idx, :])
                 eps = torch.randn_like(std)
@@ -280,20 +281,26 @@ def sampling(model, device, epoch, args, prior=None):
 
         sample = model.decode(sample.to(device)).cpu()
         s = int(args.x_dim ** 0.5)
-        save_image(sample.view(100, args.nc, s, s),
-                   '{}/samples_{}_{}.png'.format(args.resultpath, args.source_data, epoch), nrow=10)
+        save_image(sample.view(n_samples, args.nc, s, s),
+                   '{}/samples_{}_{}.png'.format(args.resultpath, args.source_data, epoch), nrow=nrow)
 
 
-def reconstruction(model, test_loader, device, epoch, args):
+def reconstruction(model, test_loader, device, epoch, args, nrow=14):
     with torch.no_grad():
         for i, (data, _) in enumerate(test_loader):
             data = data.to(device)
-            if args.model_type == 'variational':
+            if args.model_type == 'probabilistic':
                 recon_batch, z, mu, logvar = model(data)
             else:
                 recon_batch, mu = model(data)
-            if i < 5:
-                n = min(data.size(0), 10)
-                comparison = torch.cat([data[:n], recon_batch[:n]])
-                save_image(comparison.cpu(),
-                           '{}/recon_{}_{}_{}.png'.format(args.resultpath, args.source_data, epoch, i), nrow=n)
+            if i < int(nrow / 2):
+                n = min(data.size(0), nrow)
+                if i == 0:
+                    comparison = torch.cat([data[:n], recon_batch[:n]])
+                else:
+                    comparison = torch.cat([comparison, data[:n], recon_batch[:n]])
+            else:
+                break
+
+        save_image(comparison.cpu(),
+                   '{}/recon_{}_{}_{}.png'.format(args.resultpath, args.source_data, epoch, i), nrow=nrow)

@@ -1,12 +1,12 @@
 import argparse
 import pickle
 import torch.utils.data
-import Methods.prae as prae
+import Methods.gmvae as gmvae
 from Methods.models import load_datasets, AE_CelebA, AE_MNIST
 
 
 parser = argparse.ArgumentParser(description='VAE Example')
-parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+parser.add_argument('--batch-size', type=int, default=100, metavar='N',
                     help='input batch size for training (default: 512)')
 parser.add_argument('--epochs', type=int, default=50, metavar='N',
                     help='number of epochs to train (default: 10)')
@@ -20,9 +20,9 @@ parser.add_argument('--source-data', type=str, default='MNIST',
                     help='data name')
 parser.add_argument('--datapath', type=str, default='Data',
                     help='data path')
-parser.add_argument('--resultpath', type=str, default='Results/prae',
+parser.add_argument('--resultpath', type=str, default='Results/gmvae',
                     help='result path')
-parser.add_argument('--landmark-interval', type=int, default=10,
+parser.add_argument('--landmark-interval', type=int, default=5,
                     help='interval for recording')
 parser.add_argument('--x-dim', type=int, default=784,
                     help='input dimension')
@@ -30,9 +30,7 @@ parser.add_argument('--z-dim', type=int, default=8,
                     help='latent dimension')
 parser.add_argument('--nc', type=int, default=1,
                     help='the number of channels')
-parser.add_argument('--gamma', type=float, default=500.0,
-                    help='the weight of regularizer')
-parser.add_argument('--beta', type=float, default=1000.0,
+parser.add_argument('--gamma', type=float, default=1.0,
                     help='the weight of regularizer')
 parser.add_argument('--model-type', type=str, default='probabilistic',
                     help='the type of model')
@@ -53,9 +51,9 @@ if __name__ == '__main__':
             args.z_dim = 8
             args.nc = 1
             args.loss_type = 'MSE'
-            args.landmark_interval = 1
+            args.landmark_interval = 5
             model = AE_MNIST(z_dim=args.z_dim, nc=args.nc, model_type=args.model_type)
-            prior = prae.Prior(data_size=[10, args.z_dim])
+            prior = gmvae.Prior(data_size=[50, args.z_dim])
         else:
             args.x_dim = int(64 * 64)
             args.z_dim = 64
@@ -63,10 +61,10 @@ if __name__ == '__main__':
             args.loss_type = 'MSE'
             args.landmark_interval = 5
             model = AE_CelebA(z_dim=args.z_dim, nc=args.nc, model_type=args.model_type)
-            prior = prae.Prior(data_size=[10, args.z_dim])
+            prior = gmvae.Prior(data_size=[50, args.z_dim])
 
         src_loaders = load_datasets(args=args)
-        loss = prae.train_model(model, prior, src_loaders['train'], src_loaders['val'], device, args)
+        loss = gmvae.train_model(model, prior, src_loaders['train'], src_loaders['val'], device, args)
         model = model.to('cpu')
         prior = prior.to('cpu')
         torch.save(model.state_dict(), '{}/model_{}.pt'.format(args.resultpath, args.source_data))
