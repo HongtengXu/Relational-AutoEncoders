@@ -255,6 +255,52 @@ class AE_CelebA(nn.Module):
         return self.decoder(z)
 
 
+class AE_MLP(nn.Module):
+    def __init__(self, x_dim: int, z_dim: int, model_type: str = 'probabilistic'):
+        super(AE_MLP, self).__init__()
+        self.type = model_type
+        self.x_dim = x_dim
+        self.z_dim = z_dim
+        self.fc1 = nn.Linear(x_dim, 50)
+        if self.type == 'probabilistic':
+            self.fc21 = nn.Linear(50, z_dim)
+            self.fc22 = nn.Linear(50, z_dim)
+        else:
+            self.fc2 = nn.Linear(50, z_dim)
+        self.fc3 = nn.Linear(z_dim, 50)
+        self.fc4 = nn.Linear(50, x_dim)
+
+    def encode(self, x):
+        z = F.relu(self.fc1(x))
+        if self.type == 'probabilistic':
+            mu = self.fc21(z)
+            logvar = self.fc22(z)
+            z = self.reparameterize(mu, logvar)
+            return z, mu, logvar
+        else:
+            z = self.fc2(z)
+            return z
+
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5*logvar)
+        eps = torch.randn_like(std)
+        return mu + eps*std
+
+    def decode(self, z):
+        h3 = F.relu(self.fc3(z))
+        return self.fc4(h3)
+
+    def forward(self, x):
+        if self.type == 'probabilistic':
+            z, mu, logvar = self.encode(x)
+            x_recon = self.decode(z)
+            return x_recon, z, mu, logvar
+        else:
+            z = self.encode(x)
+            x_recon = self.decode(z)
+            return x_recon, z
+
+
 class SimpleVAE(nn.Module):
     def __init__(self, x_dim: int, z_dim: int):
         super(SimpleVAE, self).__init__()
@@ -346,3 +392,4 @@ def loss_function(recon_x, x, rec_type):
     else:
         reconstruction_loss = F.mse_loss(recon_x, x, reduction='sum') + F.l1_loss(recon_x, x, reduction='sum')
     return reconstruction_loss
+

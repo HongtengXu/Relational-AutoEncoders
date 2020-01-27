@@ -20,7 +20,7 @@ parser.add_argument('--source-data', type=str, default='MNIST',
                     help='data name')
 parser.add_argument('--datapath', type=str, default='Data',
                     help='data path')
-parser.add_argument('--resultpath', type=str, default='Results/gmvae',
+parser.add_argument('--resultpath', type=str, default='Results/gmvae2',
                     help='result path')
 parser.add_argument('--landmark-interval', type=int, default=5,
                     help='interval for recording')
@@ -32,6 +32,8 @@ parser.add_argument('--nc', type=int, default=1,
                     help='the number of channels')
 parser.add_argument('--gamma', type=float, default=1.0,
                     help='the weight of regularizer')
+parser.add_argument('--lr', type=float, default=5e-5,
+                    help='learning rate')
 parser.add_argument('--model-type', type=str, default='probabilistic',
                     help='the type of model')
 parser.add_argument('--loss-type', type=str, default='BCE',
@@ -43,7 +45,7 @@ device = torch.device("cuda" if args.cuda else "cpu")
 print(device)
 
 if __name__ == '__main__':
-    for src in ['MNIST']:
+    for src in ['CelebA']:
         print(src)
         args.source_data = src
         if src == 'MNIST':
@@ -53,7 +55,7 @@ if __name__ == '__main__':
             args.loss_type = 'MSE'
             args.landmark_interval = 5
             model = AE_MNIST(z_dim=args.z_dim, nc=args.nc, model_type=args.model_type)
-            prior = gmvae.Prior(data_size=[50, args.z_dim])
+            prior = gmvae.Prior(data_size=[10, args.z_dim])
         else:
             args.x_dim = int(64 * 64)
             args.z_dim = 64
@@ -61,7 +63,7 @@ if __name__ == '__main__':
             args.loss_type = 'MSE'
             args.landmark_interval = 5
             model = AE_CelebA(z_dim=args.z_dim, nc=args.nc, model_type=args.model_type)
-            prior = gmvae.Prior(data_size=[50, args.z_dim])
+            prior = gmvae.Prior(data_size=[10, args.z_dim])
 
         src_loaders = load_datasets(args=args)
         loss = gmvae.train_model(model, prior, src_loaders['train'], src_loaders['val'], device, args)

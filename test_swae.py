@@ -43,7 +43,7 @@ device = torch.device("cuda" if args.cuda else "cpu")
 print(device)
 
 if __name__ == '__main__':
-    for src in ['MNIST']:
+    for src in ['CelebA']:
         print(src)
         args.source_data = src
         if src == 'MNIST':

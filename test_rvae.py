@@ -30,8 +30,10 @@ parser.add_argument('--z-dim', type=int, default=8,
                     help='latent dimension')
 parser.add_argument('--nc', type=int, default=1,
                     help='the number of channels')
-parser.add_argument('--gamma', type=float, default=1.0,
+parser.add_argument('--gamma', type=float, default=500.0,
                     help='the weight of regularizer')
+parser.add_argument('--lr', type=float, default=5e-5,
+                    help='learning rate')
 parser.add_argument('--beta', type=float, default=0.1,
                     help='the weight of regularizer')
 parser.add_argument('--model-type', type=str, default='probabilistic',
@@ -45,7 +47,7 @@ device = torch.device("cuda" if args.cuda else "cpu")
 print(device)
 
 if __name__ == '__main__':
-    for src in ['MNIST']:
+    for src in ['CelebA']:
         print(src)
         args.source_data = src
         if src == 'MNIST':

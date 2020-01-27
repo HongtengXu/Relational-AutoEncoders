@@ -28,14 +28,14 @@ def sampling_gaussian(mu, logvar):
 
 def sampling_gmm(mu, logvar, num_sample):
     std = torch.exp(0.5 * logvar)
-    n = int(num_sample / mu.size(0))
+    n = int(num_sample / mu.size(0)) + 1
     for i in range(n):
         eps = torch.randn_like(std)
         if i == 0:
             samples = mu + eps * std
         else:
             samples = torch.cat((samples, mu + eps * std), dim=0)
-    return samples
+    return samples[:num_sample, :]
 
 
 def distance_tensor(pts_src: torch.Tensor, pts_dst: torch.Tensor, p: int = 2):

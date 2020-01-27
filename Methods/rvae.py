@@ -149,7 +149,7 @@ def fgw_discrepancy(mu, z_mu, logvar, z_logvar, device, beta):
     dual = (torch.ones(ns, 1) / ns).to(device)
     for m in range(10):
         cost = beta * cost_mat(cost_posterior, cost_prior, tran) + (1 - beta) * cost_pp
-        kernel = torch.exp(-5 * cost / torch.max(cost)) * tran
+        kernel = torch.exp(-cost / torch.max(cost)) * tran
         b = p_t / (torch.t(kernel) @ dual)
         for i in range(5):
             dual = p_s / (kernel @ b)
@@ -217,7 +217,7 @@ def train_model(model, prior, train_loader, test_loader, device, args):
     model = model.to(device)
     prior = prior.to(device)
     loss_list = []
-    optimizer = optim.Adam(list(model.parameters()) + list(prior.parameters()), lr=1e-3, betas=(0.9, 0.999))
+    optimizer = optim.Adam(list(model.parameters()) + list(prior.parameters()), lr=args.lr, betas=(0.5, 0.999))
     for epoch in range(1, args.epochs + 1):
         train(model, prior, train_loader, optimizer, device, epoch, args)
         test_rec_loss, test_reg_loss, test_loss = test(model, prior, test_loader, device, args)

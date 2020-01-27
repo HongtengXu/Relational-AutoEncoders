@@ -16,7 +16,7 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
-parser.add_argument('--source-data', type=str, default='MNIST',
+parser.add_argument('--source-data', type=str, default='CelebA',
                     help='data name')
 parser.add_argument('--datapath', type=str, default='Data',
                     help='data path')
@@ -45,7 +45,7 @@ device = torch.device("cuda" if args.cuda else "cpu")
 print(device)
 
 if __name__ == '__main__':
-    for src in ['MNIST']:
+    for src in ['CelebA']:  # , 'MNIST']:
         print(src)
         args.source_data = src
         if src == 'MNIST':
@@ -55,7 +55,7 @@ if __name__ == '__main__':
             args.loss_type = 'MSE'
             args.landmark_interval = 5
             model = AE_MNIST(z_dim=args.z_dim, nc=args.nc, model_type=args.model_type)
-            prior = rae.Prior(data_size=[50, args.z_dim])
+            prior = rae.Prior(data_size=[10, args.z_dim])
         else:
             args.x_dim = int(64 * 64)
             args.z_dim = 64
@@ -63,7 +63,7 @@ if __name__ == '__main__':
             args.loss_type = 'MSE'
             args.landmark_interval = 5
             model = AE_CelebA(z_dim=args.z_dim, nc=args.nc, model_type=args.model_type)
-            prior = rae.Prior(data_size=[50, args.z_dim])
+            prior = rae.Prior(data_size=[10, args.z_dim])
 
         src_loaders = load_datasets(args=args)
         loss = rae.train_model(model, prior, src_loaders['train'], src_loaders['val'], device, args)

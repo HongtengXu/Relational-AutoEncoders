@@ -177,7 +177,7 @@ def train_model(model, prior, train_loader, test_loader, device, args):
     model = model.to(device)
     prior = prior.to(device)
     loss_list = []
-    optimizer = optim.Adam(list(model.parameters()) + list(prior.parameters()), lr=1e-4)
+    optimizer = optim.Adam(list(model.parameters()) + list(prior.parameters()), lr=args.lr, betas=(0.5, 0.999))
     for epoch in range(1, args.epochs + 1):
         train(model, prior, train_loader, optimizer, device, epoch, args)
         test_rec_loss, test_reg_loss, test_loss = test(model, prior, test_loader, device, args)
