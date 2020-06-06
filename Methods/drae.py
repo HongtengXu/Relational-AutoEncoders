@@ -28,14 +28,14 @@ def sampling_gaussian(mu, logvar):
 
 def sampling_gmm(mu, logvar, num_sample):
     std = torch.exp(0.5 * logvar)
-    n = int(num_sample / mu.size(0))
+    n = int(num_sample / mu.size(0)) + 1
     for i in range(n):
         eps = torch.randn_like(std)
         if i == 0:
             samples = mu + eps * std
         else:
             samples = torch.cat((samples, mu + eps * std), dim=0)
-    return samples
+    return samples[:num_sample, :]
 
 
 def distance_tensor(pts_src: torch.Tensor, pts_dst: torch.Tensor, p: int = 2):
@@ -207,7 +207,7 @@ def train_model(model, prior, train_loader, test_loader, device, args):
     model = model.to(device)
     prior = prior.to(device)
     loss_list = []
-    optimizer = optim.Adam(list(model.parameters()) + list(prior.parameters()), lr=1e-3, betas=(0.9, 0.999))
+    optimizer = optim.Adam(list(model.parameters()) + list(prior.parameters()), lr=args.lr, betas=(0.9, 0.999))
     for epoch in range(1, args.epochs + 1):
         train(model, prior, train_loader, optimizer, device, epoch, args)
         test_rec_loss, test_reg_loss, test_loss = test(model, prior, test_loader, device, args)

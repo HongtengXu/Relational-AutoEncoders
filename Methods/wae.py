@@ -1,3 +1,4 @@
+import time
 import torch
 from torch import optim
 from torchvision.utils import save_image
@@ -54,6 +55,7 @@ def train(model, train_loader, optimizer, device, epoch, args):
     train_rec_loss = 0
     train_reg_loss = 0
     for batch_idx, (data, _) in enumerate(train_loader):
+        since = time.time()
         data = data.to(device)
         optimizer.zero_grad()
         recon_batch, z = model(data)
@@ -68,6 +70,7 @@ def train(model, train_loader, optimizer, device, epoch, args):
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.item() / len(data)))
+            print('Time = {:.2f}sec'.format(time.time()-since))
 
     print('====> Epoch: {} Average RecLoss: {:.4f} RegLoss: {:.4f} TotalLoss: {:.4f}'.format(
         epoch, train_rec_loss / len(train_loader.dataset), train_reg_loss / len(train_loader.dataset),
