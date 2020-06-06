@@ -5,7 +5,7 @@ from sklearn.manifold import TSNE
 from torchvision.utils import save_image
 
 
-def visualization_tsne(model, test_loader, device, args, prior=None):
+def visualization_tsne(model, test_loader, device, args, prefix, prior=None):
     model = model.to(device)
     model.eval()
     with torch.no_grad():
@@ -42,11 +42,11 @@ def visualization_tsne(model, test_loader, device, args, prior=None):
     if prior is not None:
         plt.scatter(landmarks[:, 0], landmarks[:, 1], s=50, c='k', marker='x', label=r'$\mu_k$')
     plt.legend()
-    plt.savefig('{}/tsne_{}_{}.pdf'.format(args.resultpath, args.model_type, args.source_data))
+    plt.savefig('{}/{}_tsne_{}_{}.pdf'.format(args.resultpath, prefix, args.model_type, args.source_data))
     plt.close('all')
 
 
-def visualization_tsne2(model, test_loader, device, args, prior=None):
+def visualization_tsne2(model, test_loader, device, args, prefix, prior=None):
     model = model.to(device)
     model.eval()
     with torch.no_grad():
@@ -83,11 +83,11 @@ def visualization_tsne2(model, test_loader, device, args, prior=None):
     if prior is not None:
         plt.scatter(landmarks[:, 0], landmarks[:, 1], s=50, c='k', marker='x', label=r'$\mu_k$')
     plt.legend()
-    plt.savefig('{}/tsne_{}_{}.pdf'.format(args.resultpath, args.model_type, args.source_data))
+    plt.savefig('{}/{}_tsne_{}_{}.pdf'.format(args.resultpath, prefix, args.model_type, args.source_data))
     plt.close('all')
 
 
-def interpolation_2d(model, data_loader, device, epoch, args, nrow=14):
+def interpolation_2d(model, data_loader, device, epoch, args, prefix, nrow=14):
     model.eval()
     with torch.no_grad():
         for i, (data, label) in enumerate(data_loader):
@@ -114,10 +114,11 @@ def interpolation_2d(model, data_loader, device, epoch, args, nrow=14):
         samples = model.decode(latents).cpu()
         s = int(args.x_dim ** 0.5)
         save_image(samples.view(int(nrow ** 2), args.nc, s, s),
-                   '{}/interp2d_{}_{}_{}.png'.format(args.resultpath, args.model_type, args.source_data, epoch), nrow=nrow)
+                   '{}/{}_interp2d_{}_{}_{}.png'.format(
+                       args.resultpath, prefix, args.model_type, args.source_data, epoch), nrow=nrow)
 
 
-def sampling(model, device, epoch, args, prior=None, nrow=14):
+def sampling(model, device, epoch, args, prefix, prior=None, nrow=14):
     model.eval()
     n_samples = int(nrow ** 2)
     with torch.no_grad():
@@ -137,13 +138,13 @@ def sampling(model, device, epoch, args, prior=None, nrow=14):
 
         sample = model.decode(sample.to(device)).cpu()
         s = int(args.x_dim ** 0.5)
-        pathname = '{}/samples_{}_{}_{}.png'.format(args.resultpath, args.model_type, args.source_data, epoch)
+        pathname = '{}/{}_samples_{}_{}_{}.png'.format(args.resultpath, prefix, args.model_type, args.source_data, epoch)
         print(pathname)
         save_image(sample.view(n_samples, args.nc, s, s), pathname, nrow=nrow)
         print('Done!')
 
 
-def reconstruction(model, test_loader, device, epoch, args, nrow=14):
+def reconstruction(model, test_loader, device, epoch, args, prefix, nrow=14):
     with torch.no_grad():
         for i, (data, _) in enumerate(test_loader):
             data = data.to(device)
@@ -161,7 +162,7 @@ def reconstruction(model, test_loader, device, epoch, args, nrow=14):
                 break
 
         save_image(comparison.cpu(),
-                   '{}/recon_{}_{}_{}.png'.format(args.resultpath, args.model_type, args.source_data, epoch), nrow=nrow)
+                   '{}/{}_recon_{}_{}_{}.png'.format(args.resultpath, prefix, args.model_type, args.source_data, epoch), nrow=nrow)
 
 
 

@@ -17,7 +17,7 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
-parser.add_argument('--source-data', type=str, default='CelebA',
+parser.add_argument('--source-data', type=str, default='MNIST',
                     help='data name')
 parser.add_argument('--datapath', type=str, default='Data',
                     help='data path')
@@ -60,13 +60,13 @@ if __name__ == '__main__':
 
     # conditional generation
     model.eval()
-    evaluation.sampling(model, device, args.epochs, args, nrow=4)
+    evaluation.sampling(model, device, args.epochs, args, prefix='swae', nrow=4)
 
     # t-sne visualization
     if args.source_data == 'MNIST':
-        evaluation.visualization_tsne(model, src_loaders['val'], device, args)
+        evaluation.visualization_tsne(model, src_loaders['val'], device, args, prefix='swae')
     else:
-        evaluation.visualization_tsne2(model, src_loaders['val'], device, args)
+        evaluation.visualization_tsne2(model, src_loaders['val'], device, args, prefix='swae')
 
     # save models and learning results
     model = model.to('cpu')

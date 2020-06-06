@@ -70,15 +70,15 @@ if __name__ == '__main__':
     z_p_mean, z_p_logvar = prior()
     prior_list = [z_p_mean, z_p_logvar]
     for i in range(args.K):
-        evaluation.sampling(model, device, i + 1, args,
+        evaluation.sampling(model, device, i + 1, args, prefix='gmvae',
                             prior=[z_p_mean[i, :].unsqueeze(0), z_p_logvar[i, :].unsqueeze(0)],
                             nrow=4)
 
     # t-sne visualization
     if args.source_data == 'MNIST':
-        evaluation.visualization_tsne(model, src_loaders['val'], device, args, prior=prior_list)
+        evaluation.visualization_tsne(model, src_loaders['val'], device, args, prefix='gmvae', prior=prior_list)
     else:
-        evaluation.visualization_tsne2(model, src_loaders['val'], device, args, prior=prior_list)
+        evaluation.visualization_tsne2(model, src_loaders['val'], device, args, prefix='gmvae', prior=prior_list)
 
     # save models and learning results
     model = model.to('cpu')

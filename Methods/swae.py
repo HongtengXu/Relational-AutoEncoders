@@ -104,7 +104,7 @@ def train_model(model, train_loader, test_loader, device, args):
         test_rec_loss, test_reg_loss, test_loss = test(model, test_loader, device, args)
         loss_list.append([test_rec_loss, test_reg_loss, test_loss])
         if epoch % args.landmark_interval == 0:
-            evaluation.interpolation_2d(model, test_loader, device, epoch, args)
-            evaluation.sampling(model, device, epoch, args, prior=None)
-            evaluation.reconstruction(model, test_loader, device, epoch, args)
+            evaluation.interpolation_2d(model, test_loader, device, epoch, args, prefix='swvae')
+            evaluation.sampling(model, device, epoch, args, prior=None, prefix='swae')
+            evaluation.reconstruction(model, test_loader, device, epoch, args, prefix='swvae')
     return loss_list

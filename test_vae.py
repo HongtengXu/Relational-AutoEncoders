@@ -62,13 +62,13 @@ if __name__ == '__main__':
 
     # conditional generation
     model.eval()
-    evaluation.sampling(model, device, args.epochs, args, nrow=4)
+    evaluation.sampling(model, device, args.epochs, args, prefix='vae', nrow=4)
 
     # t-sne visualization
     if args.source_data == 'MNIST':
-        evaluation.visualization_tsne(model, src_loaders['val'], device, args)
+        evaluation.visualization_tsne(model, src_loaders['val'], device, args, prefix='vae')
     else:
-        evaluation.visualization_tsne2(model, src_loaders['val'], device, args)
+        evaluation.visualization_tsne2(model, src_loaders['val'], device, args, prefix='vae')
 
     # save models and learning results
     model = model.to('cpu')

@@ -213,9 +213,9 @@ def train_model(model, prior, train_loader, test_loader, device, args):
         test_rec_loss, test_reg_loss, test_loss = test(model, prior, test_loader, device, args)
         loss_list.append([test_rec_loss, test_reg_loss, test_loss])
         if epoch % args.landmark_interval == 0:
-            evaluation.interpolation_2d(model, test_loader, device, epoch, args)
+            evaluation.interpolation_2d(model, test_loader, device, epoch, args, prefix='rae')
             prior.eval()
             z_p_mean, z_p_logvar = prior()
-            evaluation.sampling(model, device, epoch, args, prior=[z_p_mean, z_p_logvar])
-            evaluation.reconstruction(model, test_loader, device, epoch, args)
+            evaluation.sampling(model, device, epoch, args, prior=[z_p_mean, z_p_logvar], prefix='rae')
+            evaluation.reconstruction(model, test_loader, device, epoch, args, prefix='rae')
     return loss_list
