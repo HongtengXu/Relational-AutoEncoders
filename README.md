@@ -1,6 +1,6 @@
 # Relational-AutoEncoders
 
-This package includes the implementation of my ICML 2020 work **"Laerning Autoencoders with Relational Regularization"** [https://arxiv.org/pdf/2002.02913.pdf]
+This package includes the implementation of my ICML 2020 work **"Learning Autoencoders with Relational Regularization"** [https://arxiv.org/pdf/2002.02913.pdf]
 
 # Main Dependencies
 * argparse
